@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<package>
+    <name>bringup_frontAAEON</name>
+    <version>1.0.0</version>
+    <description>The raptor_bringup_front_realsense package</description>
+    <maintainer email="Chude.Qian@case.edu">Frank Qian</maintainer>
+    <license>MIT</license>
+    <url type="website">https://github.com/frank-qcd-qk</url>
+    <author email="Chude.Qian@case.edu">Frank Qian</author>
+    <buildtool_depend>catkin</buildtool_depend>
+    <buildtool_depend>catkin_simple</buildtool_depend>
+</package>
+    
