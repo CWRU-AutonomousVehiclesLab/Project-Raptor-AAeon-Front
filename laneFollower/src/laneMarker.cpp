@@ -29,7 +29,7 @@ class laneMarker{
             if (option){
                 cv::cvtColor(inputImage,displayImage,CV_GRAY2BGR);
             }else{
-                displayImage = inputImage;
+                displayImage = inputImage.clone();
             }
             cv_bridge::CvImage imgBridge = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::RGB8, displayImage);
             sensor_msgs::Image imageMessage;
@@ -172,12 +172,13 @@ class laneMarker{
             * @param maxLineGap Maximum allowed gap between points on the same line to link them.
             */
             cv::HoughLinesP(processed_IMG,lines,hough_rho,hough_theta,hough_threshold,hough_minLineLength,hough_maxLineGap);
-            ROS_INFO("Total %d Hough Lines!",lines.size());
-            cv::Mat houghDisplay;
+            ROS_INFO("Total %d Hough Lines!",(int)lines.size());
+            cv::Mat houghDisplay(processed_IMG);
             // Draw lines on the image
             for (size_t i=0; i<lines.size(); i++) {
                 cv::Vec4i l = lines[i];
                 cv::line(processed_IMG, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 0, 0), 3, cv::LINE_AA);
+                cv::line(houghDisplay, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 0, 0), 3, cv::LINE_AA);
             }
             publishOpenCVImage(debug_Hough,houghDisplay,false);
             ROS_INFO("Hough Transform Complete!");
