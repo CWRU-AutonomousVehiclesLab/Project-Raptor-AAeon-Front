@@ -176,9 +176,7 @@ class laneMarker{
 
             //! Final Generation
             publishOpenCVImage(result,processed_IMG,true);
-            cv::Mat display;
-            cv::cvtColor(processed_IMG,display,CV_GRAY2RGB);
-            publishOpenCVImage(resultOverlay,display+cv_ptr->image,false);
+            publishOpenCVImage(resultOverlay,processed_IMG+cv_ptr->image,false);
             return;
         }
     void displayHough();
