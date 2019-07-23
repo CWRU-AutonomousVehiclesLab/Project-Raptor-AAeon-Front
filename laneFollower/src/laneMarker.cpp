@@ -75,8 +75,8 @@ class laneMarker{
             double hough_rho = 2;
             double hough_theta = CV_PI/180;
             int hough_threshold = 100;
-            double hough_minLineLength = 40; 
-            double hough_maxLineGap = 5;
+            double hough_minLineLength = 100; 
+            double hough_maxLineGap = 250;
 
 
 
@@ -172,11 +172,14 @@ class laneMarker{
             * @param maxLineGap Maximum allowed gap between points on the same line to link them.
             */
             cv::HoughLinesP(processed_IMG,lines,hough_rho,hough_theta,hough_threshold,hough_minLineLength,hough_maxLineGap);
+            ROS_INFO("Total %d Hough Lines!",lines.size());
+            cv::Mat houghDisplay;
             // Draw lines on the image
             for (size_t i=0; i<lines.size(); i++) {
                 cv::Vec4i l = lines[i];
                 cv::line(processed_IMG, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 0, 0), 3, cv::LINE_AA);
             }
+            publishOpenCVImage(debug_Hough,houghDisplay,false);
             ROS_INFO("Hough Transform Complete!");
 
             //! Final Generation
