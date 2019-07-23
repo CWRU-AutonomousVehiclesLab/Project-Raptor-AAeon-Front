@@ -68,7 +68,7 @@ class laneMarker{
 
             //* Canny Edge:
             double canny_lowThreashold = 50;
-            double canny_highThreashold = 200;
+            double canny_highThreashold = 150;
             double canny_kernalSize = 3;
 
             //* Hough Transform:
@@ -177,7 +177,7 @@ class laneMarker{
             //! Final Generation
             publishOpenCVImage(result,processed_IMG,true);
             cv::Mat display;
-            cv::cvtColor(processed_IMG,display,CV_GRAY2BGR);
+            cv::cvtColor(processed_IMG,display,CV_GRAY2RGB);
             publishOpenCVImage(resultOverlay,display+cv_ptr->image,false);
             return;
         }
