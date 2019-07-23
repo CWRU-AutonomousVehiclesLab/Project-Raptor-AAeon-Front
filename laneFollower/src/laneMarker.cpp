@@ -176,6 +176,7 @@ class laneMarker{
 
             //! Final Generation
             publishOpenCVImage(result,processed_IMG,true);
+            cv::cvtColor(processed_IMG,processed_IMG,CV_GRAY2BGR);
             publishOpenCVImage(resultOverlay,processed_IMG+cv_ptr->image,false);
             return;
         }
