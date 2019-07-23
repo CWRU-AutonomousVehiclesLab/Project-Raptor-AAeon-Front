@@ -71,6 +71,15 @@ class laneMarker{
             double canny_highThreashold = 200;
             double canny_kernalSize = 3;
 
+            //* Hough Transform:
+            double hough_rho = 2;
+            double hough_theta = CV_PI/180;
+            int hough_threshold = 100;
+            double hough_minLineLength = 40; 
+            double hough_maxLineGap = 5;
+
+
+
             ROS_INFO("Image Update Recieved!");
             //! 1. Read in image
             cv_bridge::CvImagePtr cv_ptr;
@@ -151,14 +160,28 @@ class laneMarker{
             ROS_INFO("Masking & Canny Edge 2 Complete!");
 
             //! 7. Hough transform
-            
+            std::vector<cv::Vec4i> lines;
+            /**
+            * @param processed_IMG
+            * @param outputArray
+            * @param rho Distance resolution of the accumulator in pixels
+            * @param theta Angle resolution of the accumulator in radians.
+            * The larger the above two, the less precise they will be. Too small is also bad!
+            * @param threshold Accumulator threshold parameter. Only those lines are returned that get enough votes ( \f$>\texttt{threshold}\f$ ).
+            * @param minLineLength Minimum line length. Line segments shorter than that are rejected.
+            * @param maxLineGap Maximum allowed gap between points on the same line to link them.
+            */
+            cv::HoughLinesP(processed_IMG,lines,hough_rho,hough_theta,hough_threshold,hough_minLineLength,hough_maxLineGap);
 
 
             //! Final Generation
             publishOpenCVImage(result,processed_IMG,true);
-            publishOpenCVImage(resultOverlay,processed_IMG+cv_ptr->image,true);
+            cv::Mat display;
+            cv::cvtColor(processed_IMG,display,CV_GRAY2BGR);
+            publishOpenCVImage(resultOverlay,display+cv_ptr->image,false);
             return;
         }
+    void displayHough();
 };
 
 int main(int argc, char** argv) {

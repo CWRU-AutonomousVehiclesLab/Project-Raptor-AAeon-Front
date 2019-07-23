@@ -6,12 +6,12 @@
     </include>
 
     <!-- TF for the screw hole to the camera frame -->
-    <node pkg="tf" type="static_transform_publisher" name="frontRS2screwlink_publisher" args="0 0.018 0.013 0 0 0 1 Realsense_Screw front_realSense_link 100" output="log" respawn="false" respawn_delay="0">
+    <node pkg="tf" type="static_transform_publisher" name="frontRS2screwlink_publisher" args="0 0.018 0.013 0 0 0 1 Realsense_Screw front_realSense_link 1" output="log" respawn="false" respawn_delay="0">
         
     </node>
 
     <!-- TF announce -->
-    <node pkg="tf" type="static_transform_publisher" name="frontRS2tripod_publisher" args="0 0 0.14 0 0.27 0 tripod_center_table front_realSense_link 100" output="log" respawn="false" respawn_delay="0">
+    <node pkg="tf" type="static_transform_publisher" name="frontRS2tripod_publisher" args="0 0 0.14 0 0.27 0 tripod_center_table front_realSense_link 1" output="log" respawn="false" respawn_delay="0">
         
     </node>
 
