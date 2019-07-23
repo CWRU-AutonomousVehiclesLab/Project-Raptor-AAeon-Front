@@ -3,6 +3,8 @@
 #include <sensor_msgs/image_encodings.h>
 #include <cv_bridge/cv_bridge.h>
 #include <nav_msgs/OccupancyGrid.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 class laneMarker{
     private:
@@ -17,7 +19,7 @@ class laneMarker{
         image_transport::Publisher resultOverlay;
         image_transport::Publisher result;
         ros::Publisher lane_publisher;
-
+        int length,height;
         /*
         * This function is useful for publishing an image. It takes in a publisher and an cv::Mat image
         */
@@ -26,10 +28,8 @@ class laneMarker{
             cv::Mat displayImage;
             if (option){
                 cv::cvtColor(inputImage,displayImage,CV_GRAY2BGR);
-                ROS_WARN("Get BW image converted!");
             }else{
                 displayImage = inputImage;
-                ROS_WARN("Get BW image Not!");
             }
             cv_bridge::CvImage imgBridge = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::RGB8, displayImage);
             sensor_msgs::Image imageMessage;
@@ -48,7 +48,7 @@ class laneMarker{
             debug_Hough = it.advertise("/debug/front_realSense/Houghtransform",1);
             debug_mask = it.advertise("/debug/front_realSense/MaskPure",1);
 
-            resultOverlay = it.advertise("/front_realSense/cv_processed/canny_overlay",1);
+            resultOverlay = it.advertise("/front_realSense/cv_processed/overlay",1);
             result = it.advertise("/front_realSense/cv_processed/result",1);
 
             lane_publisher = nh.advertise<nav_msgs::OccupancyGrid>("/front_realSense/detected_lane",1);
@@ -57,14 +57,17 @@ class laneMarker{
 
         void processIMG(const sensor_msgs::ImageConstPtr& srcImg){
             //! 0. Process Magic Variable (Can be replaced with dynamic reconfigure later)
+            //* mask
+            double mask_top_ratio = 0.3;
+            double mask_bottom_ratio = 0.25;
             //* Gaussain Blur:
             cv::Size gaussian_Size = cv::Size(9,9);
             double gaussian_SigmaX = 0;
             double gaussian_Sigmay = 0;
 
             //* Canny Edge:
-            double canny_lowThreashold = 100;
-            double canny_highThreashold = 150;
+            double canny_lowThreashold = 50;
+            double canny_highThreashold = 200;
             double canny_kernalSize = 3;
 
             ROS_INFO("Image Update Recieved!");
@@ -80,23 +83,32 @@ class laneMarker{
                 return;
             }
             cv::Mat processed_IMG;
+
             ROS_INFO("Image Read In Complete!");
 
-            //! 2. Binarize and isolate out useless information
-            cv::Mat mask = cv::Mat::zeros(processed_IMG.rows,processed_IMG.cols,CV_8U);
-            //* Binary Mask Keypoints:
-            cv::Point triangle[3] = {
-                cv::Point(0,processed_IMG.rows),
-                cv::Point(0,processed_IMG.cols/2),
-                cv::Point(processed_IMG.rows,processed_IMG.cols)};
-            cv::fillConvexPoly( mask, triangle, 3, cv::Scalar(1) );
-            cv::bitwise_and(processed_IMG,processed_IMG,mask=mask);
-            publishOpenCVImage(debug_mask,processed_IMG,true);
-
-            //! 3. Convert into Gray Scale:
+            //! 2. Convert into Gray Scale:
             cv::cvtColor(cv_ptr->image,processed_IMG,CV_BGR2GRAY);
             publishOpenCVImage(debug_gray,processed_IMG,true);
             ROS_INFO("Image Grayscale Conversion Complete!");
+
+            //! 3. Binarize and isolate out useless information
+            cv::Mat mask(processed_IMG.rows,processed_IMG.cols,CV_8UC1,cv::Scalar(0));
+            //* Binary Mask Keypoints:
+
+            std::vector<cv::Point> trapzoid;
+            length = processed_IMG.cols;
+            height = processed_IMG.rows;
+            trapzoid.push_back(cv::Point(0+length*mask_top_ratio, 0));
+            trapzoid.push_back(cv::Point(length*(1-mask_top_ratio),0));
+            trapzoid.push_back(cv::Point(length,height*(1-mask_bottom_ratio)));
+            trapzoid.push_back(cv::Point(length,height));
+            trapzoid.push_back(cv::Point(0,height));
+            trapzoid.push_back(cv::Point(0,height*(1-mask_bottom_ratio)));
+
+            cv::fillConvexPoly( mask, trapzoid, 255 );
+            publishOpenCVImage(debug_mask,mask,true);
+            processed_IMG = processed_IMG & mask;
+            ROS_INFO("Masking 1 Complete!");
 
             //! 4. Gaussian Blur:
             /**
@@ -117,24 +129,29 @@ class laneMarker{
 
             //! 5. Canny Edge Detector
             cv::Canny(processed_IMG,processed_IMG,canny_lowThreashold, canny_highThreashold, canny_kernalSize);
-            publishOpenCVImage(debug_CannyEdge,processed_IMG,true);
             ROS_INFO("Canny Edge Complete!");
 
-            //! 6. Hough transform
+            //! 6. Binarize and isolate out useless information
+            cv::Mat mask2(processed_IMG.rows,processed_IMG.cols,CV_8UC1,cv::Scalar(0));
+            //* Binary Mask Keypoints:
+
+            std::vector<cv::Point> trapzoid2;
+            length = processed_IMG.cols;
+            height = processed_IMG.rows;
+            trapzoid2.push_back(cv::Point(0+length*mask_top_ratio+3, 0));
+            trapzoid2.push_back(cv::Point(length*(1-mask_top_ratio)-3,0));
+            trapzoid2.push_back(cv::Point(length-4,height*(1-mask_bottom_ratio)-3));
+            trapzoid2.push_back(cv::Point(length-4,height));
+            trapzoid2.push_back(cv::Point(0+4,height));
+            trapzoid2.push_back(cv::Point(0+4,height*(1-mask_bottom_ratio)-3));
+
+            cv::fillConvexPoly( mask2, trapzoid2, 255 );
+            processed_IMG = processed_IMG & mask2;
+            ROS_INFO("Masking 2 Complete!");
+            publishOpenCVImage(debug_CannyEdge,processed_IMG,true);
+
+            //! 7. Hough transform
         }
-
-        void createMask(cv::Mat &frame){
-            int rows = frame.rows;
-            int cols = frame.cols;
-
-            cv::Point points[1][4];
-            points[0][0] = cv::Point(cols*0.05, rows);
-            points[0][1] = cv::Point(cols*0.4, rows*0.4);
-            points[0][2] = cv::Point(cols*0.6, rows*0.4);
-            points[0][3] = cv::Point(cols*0.95, rows);
-
-
-        };
 };
 
 int main(int argc, char** argv) {
