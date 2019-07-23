@@ -69,7 +69,7 @@ class laneMarker{
             //* Canny Edge:
             double canny_lowThreashold = 50;
             double canny_highThreashold = 100;
-            double canny_kernalSize = 4;
+            double canny_kernalSize = 3;
 
             //* Hough Transform:
             double hough_rho = 2;
