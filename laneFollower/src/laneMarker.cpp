@@ -68,8 +68,8 @@ class laneMarker{
 
             //* Canny Edge:
             double canny_lowThreashold = 50;
-            double canny_highThreashold = 150;
-            double canny_kernalSize = 3;
+            double canny_highThreashold = 100;
+            double canny_kernalSize = 4;
 
             //* Hough Transform:
             double hough_rho = 2;
@@ -172,7 +172,12 @@ class laneMarker{
             * @param maxLineGap Maximum allowed gap between points on the same line to link them.
             */
             cv::HoughLinesP(processed_IMG,lines,hough_rho,hough_theta,hough_threshold,hough_minLineLength,hough_maxLineGap);
-
+            // Draw lines on the image
+            for (size_t i=0; i<lines.size(); i++) {
+                cv::Vec4i l = lines[i];
+                cv::line(processed_IMG, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 0, 0), 3, cv::LINE_AA);
+            }
+            ROS_INFO("Hough Transform Complete!");
 
             //! Final Generation
             publishOpenCVImage(result,processed_IMG,true);
@@ -180,7 +185,6 @@ class laneMarker{
             publishOpenCVImage(resultOverlay,processed_IMG+cv_ptr->image,false);
             return;
         }
-    void displayHough();
 };
 
 int main(int argc, char** argv) {
