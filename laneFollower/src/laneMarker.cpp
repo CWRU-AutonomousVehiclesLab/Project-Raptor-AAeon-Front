@@ -20,6 +20,7 @@ class laneMarker{
         image_transport::Publisher result;
         ros::Publisher lane_publisher;
         int length,height;
+
         /*
         * This function is useful for publishing an image. It takes in a publisher and an cv::Mat image
         */
@@ -35,8 +36,9 @@ class laneMarker{
             sensor_msgs::Image imageMessage;
             imgBridge.toImageMsg(imageMessage);
             publisher.publish(imageMessage);
+            return;
         }
-        
+
     public:
         //* Constructor
 
@@ -54,29 +56,39 @@ class laneMarker{
             lane_publisher = nh.advertise<nav_msgs::OccupancyGrid>("/front_realSense/detected_lane",1);
         }
 
-
         void processIMG(const sensor_msgs::ImageConstPtr& srcImg){
+            cv::Mat processed_IMG;
+
             //! 0. Process Magic Variable (Can be replaced with dynamic reconfigure later)
             //* mask
-            double mask_top_ratio = 0.3;
-            double mask_bottom_ratio = 0.25;
+            double mask_top_ratio = 0.25;
+            double mask_bottom_ratio = 0.2;
             int secondary_crop = 5; //pixels
+
             //* Gaussain Blur:
-            cv::Size gaussian_Size = cv::Size(9,9);
+            cv::Size gaussian_Size = cv::Size(15,15);
             double gaussian_SigmaX = 0;
             double gaussian_Sigmay = 0;
 
+            //* Erosion Dialation:
+            int erosion_type= cv::MORPH_RECT;
+            int erosion_size = 1;
+            int dilation_type= cv::MORPH_RECT;
+            int dilation_size = 1;
+            int max_elem = 2;
+            int max_kernel_size = 21;
+
             //* Canny Edge:
-            double canny_lowThreashold = 50;
+            double canny_lowThreashold = 20;
             double canny_highThreashold = 100;
             double canny_kernalSize = 3;
 
             //* Hough Transform:
-            double hough_rho = 2;
+            double hough_rho = 3;
             double hough_theta = CV_PI/180;
             int hough_threshold = 100;
-            double hough_minLineLength = 100; 
-            double hough_maxLineGap = 250;
+            double hough_minLineLength = 400; 
+            double hough_maxLineGap = 100;
 
 
 
@@ -85,14 +97,13 @@ class laneMarker{
             cv_bridge::CvImagePtr cv_ptr;
             try
             {
-                cv_ptr = cv_bridge::toCvCopy(srcImg,sensor_msgs::image_encodings::BGR8);
+                cv_ptr = cv_bridge::toCvCopy(srcImg,sensor_msgs::image_encodings::RGB8);
             }
             catch(const cv_bridge::Exception& e)
             {   
                 ROS_ERROR("cv_bridge BGR converstion exception: %s",e.what());
                 return;
             }
-            cv::Mat processed_IMG;
             ROS_INFO("Image Read In Complete!");
 
             //! 2. Convert into Gray Scale:
@@ -135,6 +146,20 @@ class laneMarker{
             publishOpenCVImage(debug_Gaussian,processed_IMG,true);
             ROS_INFO("Gaussian Blur Complete!");
 
+            //! 4.5 Errosion + Dialation:
+
+            cv::Mat element = cv::getStructuringElement( erosion_type,
+                                                cv::Size( 2*erosion_size + 1, 2*erosion_size+1 ),
+                                                cv::Point( erosion_size, erosion_size ) );
+
+            /// Apply the erosion operation
+            cv::erode( processed_IMG, processed_IMG, element );
+            element = cv::getStructuringElement( dilation_type,
+                                                cv::Size( 2*dilation_size + 1, 2*dilation_size+1 ),
+                                                cv::Point( dilation_size, dilation_size ) );
+            /// Apply the dilation operation
+            cv::dilate( processed_IMG, processed_IMG, element );
+            
             //! 5. Canny Edge Detector
             cv::Canny(processed_IMG,processed_IMG,canny_lowThreashold, canny_highThreashold, canny_kernalSize);
             ROS_INFO("Canny Edge Complete!");
@@ -173,12 +198,12 @@ class laneMarker{
             */
             cv::HoughLinesP(processed_IMG,lines,hough_rho,hough_theta,hough_threshold,hough_minLineLength,hough_maxLineGap);
             ROS_INFO("Total %d Hough Lines!",(int)lines.size());
-            cv::Mat houghDisplay(processed_IMG);
+            cv::Mat houghDisplay(processed_IMG.rows,processed_IMG.cols,CV_8UC3);
             // Draw lines on the image
             for (size_t i=0; i<lines.size(); i++) {
                 cv::Vec4i l = lines[i];
-                cv::line(processed_IMG, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 0, 0), 3, cv::LINE_AA);
-                cv::line(houghDisplay, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 0, 0), 3, cv::LINE_AA);
+                cv::line(processed_IMG, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 0, 0), 25, cv::LINE_AA);
+                cv::line(houghDisplay, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 0, 0), 25, cv::LINE_AA);
             }
             publishOpenCVImage(debug_Hough,houghDisplay,false);
             ROS_INFO("Hough Transform Complete!");
