@@ -44,9 +44,9 @@ class laneMarker{
             //! Subscriber subscribe and then process the image using process
             rawSubscriber = it.subscribe("/front_realSense/color/image_raw", 1, &laneMarker::processIMG, this);
             debug_Gaussian = it.advertise("/debug/front_realSense/Gaussian",1);
+            debug_mask = it.advertise("/debug/front_realSense/MaskPure",1);
             debug_CannyEdge = it.advertise("/debug/front_realSense/Cannyedge",1);
             debug_Hough = it.advertise("/debug/front_realSense/Houghtransform",1);
-            debug_mask = it.advertise("/debug/front_realSense/MaskPure",1);
 
             resultOverlay = it.advertise("/front_realSense/cv_processed/overlay",1);
             result = it.advertise("/front_realSense/cv_processed/result",1);
@@ -60,6 +60,7 @@ class laneMarker{
             //* mask
             double mask_top_ratio = 0.3;
             double mask_bottom_ratio = 0.25;
+            int secondary_crop = 5; //pixels
             //* Gaussain Blur:
             cv::Size gaussian_Size = cv::Size(9,9);
             double gaussian_SigmaX = 0;
@@ -83,7 +84,6 @@ class laneMarker{
                 return;
             }
             cv::Mat processed_IMG;
-
             ROS_INFO("Image Read In Complete!");
 
             //! 2. Convert into Gray Scale:
@@ -94,7 +94,6 @@ class laneMarker{
             //! 3. Binarize and isolate out useless information
             cv::Mat mask(processed_IMG.rows,processed_IMG.cols,CV_8UC1,cv::Scalar(0));
             //* Binary Mask Keypoints:
-
             std::vector<cv::Point> trapzoid;
             length = processed_IMG.cols;
             height = processed_IMG.rows;
@@ -104,7 +103,7 @@ class laneMarker{
             trapzoid.push_back(cv::Point(length,height));
             trapzoid.push_back(cv::Point(0,height));
             trapzoid.push_back(cv::Point(0,height*(1-mask_bottom_ratio)));
-
+            //* Draw Mask
             cv::fillConvexPoly( mask, trapzoid, 255 );
             publishOpenCVImage(debug_mask,mask,true);
             processed_IMG = processed_IMG & mask;
@@ -133,24 +132,32 @@ class laneMarker{
 
             //! 6. Binarize and isolate out useless information
             cv::Mat mask2(processed_IMG.rows,processed_IMG.cols,CV_8UC1,cv::Scalar(0));
+            
             //* Binary Mask Keypoints:
-
             std::vector<cv::Point> trapzoid2;
             length = processed_IMG.cols;
             height = processed_IMG.rows;
-            trapzoid2.push_back(cv::Point(0+length*mask_top_ratio+3, 0));
-            trapzoid2.push_back(cv::Point(length*(1-mask_top_ratio)-3,0));
-            trapzoid2.push_back(cv::Point(length-4,height*(1-mask_bottom_ratio)-3));
-            trapzoid2.push_back(cv::Point(length-4,height));
-            trapzoid2.push_back(cv::Point(0+4,height));
-            trapzoid2.push_back(cv::Point(0+4,height*(1-mask_bottom_ratio)-3));
+            trapzoid2.push_back(cv::Point(0+length*mask_top_ratio+secondary_crop, 0));
+            trapzoid2.push_back(cv::Point(length*(1-mask_top_ratio)-secondary_crop,0));
+            trapzoid2.push_back(cv::Point(length-secondary_crop,height*(1-mask_bottom_ratio)-secondary_crop));
+            trapzoid2.push_back(cv::Point(length-secondary_crop,height));
+            trapzoid2.push_back(cv::Point(0+secondary_crop,height));
+            trapzoid2.push_back(cv::Point(0+secondary_crop,height*(1-mask_bottom_ratio)-secondary_crop));
 
+            //* Draw Mask
             cv::fillConvexPoly( mask2, trapzoid2, 255 );
             processed_IMG = processed_IMG & mask2;
-            ROS_INFO("Masking 2 Complete!");
             publishOpenCVImage(debug_CannyEdge,processed_IMG,true);
+            ROS_INFO("Masking & Canny Edge 2 Complete!");
 
             //! 7. Hough transform
+            
+
+
+            //! Final Generation
+            publishOpenCVImage(result,processed_IMG,true);
+            publishOpenCVImage(resultOverlay,processed_IMG+cv_ptr->image,true);
+            return;
         }
 };
 
