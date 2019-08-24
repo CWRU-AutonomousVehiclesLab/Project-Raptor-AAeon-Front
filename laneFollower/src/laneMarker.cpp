@@ -44,16 +44,16 @@ class laneMarker{
 
         laneMarker() : it(nh) {
             //! Subscriber subscribe and then process the image using process
-            rawSubscriber = it.subscribe("/front_realSense/color/image_raw", 1, &laneMarker::processIMG, this);
-            debug_Gaussian = it.advertise("/debug/front_realSense/Gaussian",1);
-            debug_mask = it.advertise("/debug/front_realSense/MaskPure",1);
-            debug_CannyEdge = it.advertise("/debug/front_realSense/Cannyedge",1);
-            debug_Hough = it.advertise("/debug/front_realSense/Houghtransform",1);
+            rawSubscriber = it.subscribe("/lane_watcher/color/image_raw", 1, &laneMarker::processIMG, this);
+            debug_Gaussian = it.advertise("/debug/lane_watcher/Gaussian",1);
+            debug_mask = it.advertise("/debug/lane_watcher/MaskPure",1);
+            debug_CannyEdge = it.advertise("/debug/lane_watcher/Cannyedge",1);
+            debug_Hough = it.advertise("/debug/lane_watcher/Houghtransform",1);
 
-            resultOverlay = it.advertise("/front_realSense/cv_processed/overlay",1);
-            result = it.advertise("/front_realSense/cv_processed/result",1);
+            resultOverlay = it.advertise("/processed/cv/overlay",1);
+            result = it.advertise("/processed/cv/result",1);
 
-            lane_publisher = nh.advertise<nav_msgs::OccupancyGrid>("/front_realSense/detected_lane",1);
+            lane_publisher = nh.advertise<nav_msgs::OccupancyGrid>("/processed/front_realSense/detected_lane",1);
         }
 
         void processIMG(const sensor_msgs::ImageConstPtr& srcImg){

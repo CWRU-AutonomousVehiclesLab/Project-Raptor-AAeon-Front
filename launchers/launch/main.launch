@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
     <!-- Camera Bringup -->
-    <include file="$(find bringup_frontAAEON)/launch/realSense.launch">
+    <include file="$(find bringup_frontAAEON)/launch/dualLaunch.launch">
         
     </include>
 
